@@ -26,8 +26,6 @@ def get_string_from_tuple(s):
             # Check if the type of t is tuple
             if type(t) == tuple:
                 return t[0]
-            else:
-                pass
     except:
         pass
     return s
@@ -44,9 +42,7 @@ def is_power_of_two(n):
     Thus, if the result of the bitwise AND operation is 0, then n is a power of 2 and the function returns True. Otherwise, the function returns False.
 
     """
-    if n <= 0:
-        return False
-    return (n & (n - 1)) == 0
+    return False if n <= 0 else (n & (n - 1)) == 0
 
 
 def autocast(f, enabled=True):
@@ -69,16 +65,13 @@ def log_txt_as_img(wh, xc, size=10):
     # wh a tuple of (width, height)
     # xc a list of captions to plot
     b = len(xc)
-    txts = list()
+    txts = []
     for bi in range(b):
         txt = Image.new("RGB", wh, color="white")
         draw = ImageDraw.Draw(txt)
         font = ImageFont.truetype("data/DejaVuSans.ttf", size=size)
         nc = int(40 * (wh[0] / 256))
-        if isinstance(xc[bi], list):
-            text_seq = xc[bi][0]
-        else:
-            text_seq = xc[bi]
+        text_seq = xc[bi][0] if isinstance(xc[bi], list) else xc[bi]
         lines = "\n".join(
             text_seq[start : start + nc] for start in range(0, len(text_seq), nc)
         )
@@ -104,9 +97,7 @@ def partialclass(cls, *args, **kwargs):
 
 def make_path_absolute(path):
     fs, p = fsspec.core.url_to_fs(path)
-    if fs.protocol == "file":
-        return os.path.abspath(p)
-    return path
+    return os.path.abspath(p) if fs.protocol == "file" else path
 
 
 def ismap(x):
@@ -118,20 +109,17 @@ def ismap(x):
 def isimage(x):
     if not isinstance(x, torch.Tensor):
         return False
-    return (len(x.shape) == 4) and (x.shape[1] == 3 or x.shape[1] == 1)
+    return len(x.shape) == 4 and x.shape[1] in [3, 1]
 
 
 def isheatmap(x):
-    if not isinstance(x, torch.Tensor):
-        return False
-
-    return x.ndim == 2
+    return False if not isinstance(x, torch.Tensor) else x.ndim == 2
 
 
 def isneighbors(x):
     if not isinstance(x, torch.Tensor):
         return False
-    return x.ndim == 5 and (x.shape[2] == 3 or x.shape[2] == 1)
+    return x.ndim == 5 and x.shape[2] in [3, 1]
 
 
 def exists(x):
@@ -166,10 +154,8 @@ def count_params(model, verbose=False):
 
 
 def instantiate_from_config(config):
-    if not "target" in config:
-        if config == "__is_first_stage__":
-            return None
-        elif config == "__is_unconditional__":
+    if "target" not in config:
+        if config in ["__is_first_stage__", "__is_unconditional__"]:
             return None
         raise KeyError("Expected key `target` to instantiate.")
     return get_obj_from_str(config["target"])(**config.get("params", dict()))

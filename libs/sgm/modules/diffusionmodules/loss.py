@@ -20,7 +20,7 @@ class StandardDiffusionLoss(nn.Module):
     ):
         super().__init__()
 
-        assert loss_type in ["l2", "l1", "lpips"]
+        assert loss_type in {"l2", "l1", "lpips"}
 
         self.sigma_sampler = instantiate_from_config(sigma_sampler_config)
         self.loss_weighting = instantiate_from_config(loss_weighting_config)
@@ -42,8 +42,7 @@ class StandardDiffusionLoss(nn.Module):
     def get_noised_input(
         self, sigmas_bc: torch.Tensor, noise: torch.Tensor, input: torch.Tensor
     ) -> torch.Tensor:
-        noised_input = input + noise * sigmas_bc
-        return noised_input
+        return input + noise * sigmas_bc
 
     def forward(
         self,
@@ -99,7 +98,6 @@ class StandardDiffusionLoss(nn.Module):
                 (w * (model_output - target).abs()).reshape(target.shape[0], -1), 1
             )
         elif self.loss_type == "lpips":
-            loss = self.lpips(model_output, target).reshape(-1)
-            return loss
+            return self.lpips(model_output, target).reshape(-1)
         else:
             raise NotImplementedError(f"Unknown loss type {self.loss_type}")

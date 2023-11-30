@@ -21,10 +21,7 @@ class DiagonalGaussianRegularizer(AbstractRegularizer):
     def forward(self, z: torch.Tensor) -> Tuple[torch.Tensor, dict]:
         log = dict()
         posterior = DiagonalGaussianDistribution(z)
-        if self.sample:
-            z = posterior.sample()
-        else:
-            z = posterior.mode()
+        z = posterior.sample() if self.sample else posterior.mode()
         kl_loss = posterior.kl()
         kl_loss = torch.sum(kl_loss) / kl_loss.shape[0]
         log["kl_loss"] = kl_loss

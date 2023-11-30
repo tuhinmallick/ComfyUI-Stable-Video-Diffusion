@@ -172,7 +172,7 @@ class GeneralConditioner(nn.Module):
     ):
         if force_uc_zero_embeddings is None:
             force_uc_zero_embeddings = []
-        ucg_rates = list()
+        ucg_rates = []
         for embedder in self.embedders:
             ucg_rates.append(embedder.ucg_rate)
             embedder.ucg_rate = 0.0
@@ -198,10 +198,7 @@ class InceptionV3(nn.Module):
     def forward(self, inp):
         outp = self.model(inp)
 
-        if len(outp) == 1:
-            return outp[0].squeeze()
-
-        return outp
+        return outp[0].squeeze() if len(outp) == 1 else outp
 
 
 class IdentityEncoder(AbstractEmbModel):
@@ -279,8 +276,7 @@ class FrozenT5Embedder(AbstractEmbModel):
         tokens = batch_encoding["input_ids"].to(self.device)
         with torch.autocast("cuda", enabled=False):
             outputs = self.transformer(input_ids=tokens)
-        z = outputs.last_hidden_state
-        return z
+        return outputs.last_hidden_state
 
     def encode(self, text):
         return self(text)
@@ -321,8 +317,7 @@ class FrozenByT5Embedder(AbstractEmbModel):
         tokens = batch_encoding["input_ids"].to(self.device)
         with torch.autocast("cuda", enabled=False):
             outputs = self.transformer(input_ids=tokens)
-        z = outputs.last_hidden_state
-        return z
+        return outputs.last_hidden_state
 
     def encode(self, text):
         return self(text)
@@ -385,9 +380,7 @@ class FrozenCLIPEmbedder(AbstractEmbModel):
             z = outputs.pooler_output[:, None, :]
         else:
             z = outputs.hidden_states[self.layer_idx]
-        if self.return_pooled:
-            return z, outputs.pooler_output
-        return z
+        return (z, outputs.pooler_output) if self.return_pooled else z
 
     def encode(self, text):
         return self(text)
@@ -459,14 +452,14 @@ class FrozenOpenCLIPEmbedder2(AbstractEmbModel):
         if self.legacy:
             x = x[self.layer]
             x = self.model.ln_final(x)
-            return x
         else:
             # x is a dict and will stay a dict
             o = x["last"]
             o = self.model.ln_final(o)
             pooled = self.pool(o, text)
             x["pooled"] = pooled
-            return x
+
+        return x
 
     def pool(self, x, text):
         # take features from the eot embedding (eot_token is the highest number in each sequence)
@@ -538,8 +531,7 @@ class FrozenOpenCLIPEmbedder(AbstractEmbModel):
 
     def forward(self, text):
         tokens = open_clip.tokenize(text)
-        z = self.encode_with_transformer(tokens.to(self.device))
-        return z
+        return self.encode_with_transformer(tokens.to(self.device))
 
     def encode_with_transformer(self, text):
         x = self.model.token_embedding(text)  # [batch_size, n_ctx, d_model]
@@ -627,9 +619,7 @@ class FrozenOpenCLIPImageEmbedder(AbstractEmbModel):
             antialias=self.antialias,
         )
         x = (x + 1.0) / 2.0
-        # renormalize according to clip
-        x = kornia.enhance.normalize(x, self.mean, self.std)
-        return x
+        return kornia.enhance.normalize(x, self.mean, self.std)
 
     def freeze(self):
         self.model = self.model.eval()
@@ -643,7 +633,7 @@ class FrozenOpenCLIPImageEmbedder(AbstractEmbModel):
         if self.output_tokens:
             z, tokens = z[0], z[1]
         z = z.to(image.dtype)
-        if self.ucg_rate > 0.0 and not no_dropout and not (self.max_crops > 0):
+        if self.ucg_rate > 0.0 and not no_dropout and self.max_crops <= 0:
             z = (
                 torch.bernoulli(
                     (1.0 - self.ucg_rate) * torch.ones(z.shape[0], device=z.device)
@@ -668,10 +658,7 @@ class FrozenOpenCLIPImageEmbedder(AbstractEmbModel):
             assert not self.pad_to_max_len
             return tokens, z
         if self.repeat_to_max_len:
-            if z.dim() == 2:
-                z_ = z[:, None, :]
-            else:
-                z_ = z
+            z_ = z[:, None, :] if z.dim() == 2 else z
             return repeat(z_, "b 1 d -> b n d", n=self.max_length), z
         elif self.pad_to_max_len:
             assert z.dim() == 3
@@ -720,9 +707,7 @@ class FrozenOpenCLIPImageEmbedder(AbstractEmbModel):
                     f"You are running very experimental token-concat in {self.__class__.__name__}. "
                     f"Check what you are doing, and then remove this message."
                 )
-        if self.output_tokens:
-            return x, tokens
-        return x
+        return (x, tokens) if self.output_tokens else x
 
     def encode(self, text):
         return self(text)
@@ -802,7 +787,7 @@ class SpatialRescaler(nn.Module):
             x = rearrange(x, "b c t h w -> b t c h w")
             x = rearrange(x, "b t c h w -> (b t) c h w")
 
-        for stage in range(self.n_stages):
+        for _ in range(self.n_stages):
             x = self.interpolator(x, scale_factor=self.multiplier)
 
         if self.wrap_video:
@@ -1020,9 +1005,7 @@ class VideoPredictionEmbedderWithEncoder(AbstractEmbModel):
         vid = rearrange(vid, "(b t) c h w -> b () (t c) h w", t=self.n_cond_frames)
         vid = repeat(vid, "b 1 c h w -> (b t) c h w", t=self.n_copies)
 
-        return_val = (vid, sigma_cond) if self.sigma_cond is not None else vid
-
-        return return_val
+        return (vid, sigma_cond) if self.sigma_cond is not None else vid
 
 
 class FrozenOpenCLIPImagePredictionEmbedder(AbstractEmbModel):

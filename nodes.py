@@ -13,14 +13,10 @@ class SVDModelLoader:
         self.svd_model = None
         
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(cls):
         checkpoints = folder_paths.get_filename_list("svd")
 
-        devices = []
-        if True: #torch.cuda.is_available():
-            devices.append("cuda")
-        devices.append("cpu")
-
+        devices = ["cuda", "cpu"]
         return {
             "required": {
                 "checkpoint" : (checkpoints, {
@@ -63,11 +59,8 @@ class SVDModelLoader:
 
 class SVDSampler:
     @classmethod
-    def INPUT_TYPES(s):
-        devices = []
-        if True: #torch.cuda.is_available():
-            devices.append("cuda")
-        devices.append("cpu")
+    def INPUT_TYPES(cls):
+        devices = ["cuda", "cpu"]
         return {
             "required": {
                 "image": ("IMAGE",),
@@ -194,11 +187,8 @@ class SVDSampler:
 
 class SVDDecoder:
     @classmethod
-    def INPUT_TYPES(s):
-        devices = []
-        if True: #torch.cuda.is_available():
-            devices.append("cuda")
-        devices.append("cpu")
+    def INPUT_TYPES(cls):
+        devices = ["cuda", "cpu"]
         return {
             "required": {
                 "samples_z": ("LATENT",),
@@ -245,15 +235,11 @@ class SVDSimpleImg2Vid:
     Combines the SVDModelLoader, SVDSampler, and SVDDecoder nodes into one node.
     """
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(cls):
         checkpoints = folder_paths.get_filename_list("svd")
         configs = os.listdir(os.path.join(os.path.dirname(os.path.realpath(__file__)), "svd_configs"))
 
-        devices = []
-        if True: #torch.cuda.is_available():
-            devices.append("cuda")
-        devices.append("cpu")
-
+        devices = ["cuda", "cpu"]
         return {
             "required": {
                 "image": ("IMAGE",),

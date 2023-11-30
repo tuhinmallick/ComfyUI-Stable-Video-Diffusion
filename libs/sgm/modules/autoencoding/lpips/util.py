@@ -34,8 +34,8 @@ def md5_hash(path):
 def get_ckpt_path(name, root, check=False):
     assert name in URL_MAP
     path = os.path.join(root, CKPT_MAP[name])
-    if not os.path.exists(path) or (check and not md5_hash(path) == MD5_MAP[name]):
-        print("Downloading {} model from {} to {}".format(name, URL_MAP[name], path))
+    if not os.path.exists(path) or check and md5_hash(path) != MD5_MAP[name]:
+        print(f"Downloading {name} model from {URL_MAP[name]} to {path}")
         download(URL_MAP[name], path)
         md5 = md5_hash(path)
         assert md5 == MD5_MAP[name], md5
@@ -111,9 +111,8 @@ class ActNorm(nn.Module):
                     "Initializing ActNorm in reverse direction is "
                     "disabled by default. Use allow_reverse_init=True to enable."
                 )
-            else:
-                self.initialize(output)
-                self.initialized.fill_(1)
+            self.initialize(output)
+            self.initialized.fill_(1)
 
         if len(output.shape) == 2:
             output = output[:, :, None, None]

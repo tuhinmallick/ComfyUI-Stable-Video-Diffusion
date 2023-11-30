@@ -248,8 +248,7 @@ class DiffusionEngine(pl.LightningModule):
         denoiser = lambda input, sigma, c: self.denoiser(
             self.model, input, sigma, c, **kwargs
         )
-        samples = self.sampler(denoiser, randn, cond, uc=uc)
-        return samples
+        return self.sampler(denoiser, randn, cond, uc=uc)
 
     @torch.no_grad()
     def log_conditionings(self, batch: Dict, n: int) -> Dict:

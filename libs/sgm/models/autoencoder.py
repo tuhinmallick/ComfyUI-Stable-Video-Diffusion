@@ -179,16 +179,16 @@ class AutoencodingEngine(AbstractAutoencoder):
             params += list(self.loss.get_trainable_autoencoder_parameters())
         if hasattr(self.regularization, "get_trainable_parameters"):
             params += list(self.regularization.get_trainable_parameters())
-        params = params + list(self.encoder.parameters())
-        params = params + list(self.decoder.parameters())
+        params += list(self.encoder.parameters())
+        params += list(self.decoder.parameters())
         return params
 
     def get_discriminator_params(self) -> list:
-        if hasattr(self.loss, "get_trainable_parameters"):
-            params = list(self.loss.get_trainable_parameters())  # e.g., discriminator
-        else:
-            params = []
-        return params
+        return (
+            list(self.loss.get_trainable_parameters())
+            if hasattr(self.loss, "get_trainable_parameters")
+            else []
+        )
 
     def get_last_layer(self):
         return self.decoder.get_last_layer()
@@ -203,13 +203,10 @@ class AutoencodingEngine(AbstractAutoencoder):
         if unregularized:
             return z, dict()
         z, reg_log = self.regularization(z)
-        if return_reg_log:
-            return z, reg_log
-        return z
+        return (z, reg_log) if return_reg_log else z
 
     def decode(self, z: torch.Tensor, **kwargs) -> torch.Tensor:
-        x = self.decoder(z, **kwargs)
-        return x
+        return self.decoder(z, **kwargs)
 
     def forward(
         self, x: torch.Tensor, **additional_decode_kwargs
@@ -312,7 +309,7 @@ class AutoencodingEngine(AbstractAutoencoder):
                 "optimizer_idx": 0,
                 "global_step": self.global_step,
                 "last_layer": self.get_last_layer(),
-                "split": "val" + postfix,
+                "split": f"val{postfix}",
                 "regularization_log": regularization_log,
                 "autoencoder": self,
             }
@@ -354,7 +351,7 @@ class AutoencodingEngine(AbstractAutoencoder):
                     if re.match(pattern, p_name):
                         pattern_params.append(param)
                         num_params += param.numel()
-                if len(pattern_params) == 0:
+                if not pattern_params:
                     logpy.warn(f"Did not find parameters for pattern {pattern_}")
                 params.extend(pattern_params)
             groups.append({"params": params, **args})
@@ -462,8 +459,7 @@ class AutoencodingEngineLegacy(AutoencodingEngine):
         self.apply_ckpt(default(ckpt_path, ckpt_engine))
 
     def get_autoencoder_params(self) -> list:
-        params = super().get_autoencoder_params()
-        return params
+        return super().get_autoencoder_params()
 
     def encode(
         self, x: torch.Tensor, return_reg_log: bool = False
@@ -475,7 +471,7 @@ class AutoencodingEngineLegacy(AutoencodingEngine):
             N = x.shape[0]
             bs = self.max_batch_size
             n_batches = int(math.ceil(N / bs))
-            z = list()
+            z = []
             for i_batch in range(n_batches):
                 z_batch = self.encoder(x[i_batch * bs : (i_batch + 1) * bs])
                 z_batch = self.quant_conv(z_batch)
@@ -483,9 +479,7 @@ class AutoencodingEngineLegacy(AutoencodingEngine):
             z = torch.cat(z, 0)
 
         z, reg_log = self.regularization(z)
-        if return_reg_log:
-            return z, reg_log
-        return z
+        return (z, reg_log) if return_reg_log else z
 
     def decode(self, z: torch.Tensor, **decoder_kwargs) -> torch.Tensor:
         if self.max_batch_size is None:
@@ -495,7 +489,7 @@ class AutoencodingEngineLegacy(AutoencodingEngine):
             N = z.shape[0]
             bs = self.max_batch_size
             n_batches = int(math.ceil(N / bs))
-            dec = list()
+            dec = []
             for i_batch in range(n_batches):
                 dec_batch = self.post_quant_conv(z[i_batch * bs : (i_batch + 1) * bs])
                 dec_batch = self.decoder(dec_batch, **decoder_kwargs)
@@ -529,7 +523,7 @@ class AutoencoderLegacyVQ(AutoencodingEngineLegacy):
         **kwargs,
     ):
         if "lossconfig" in kwargs:
-            logpy.warn(f"Parameter `lossconfig` is deprecated, use `loss_config`.")
+            logpy.warn("Parameter `lossconfig` is deprecated, use `loss_config`.")
             kwargs["loss_config"] = kwargs.pop("lossconfig")
         super().__init__(
             regularizer_config={

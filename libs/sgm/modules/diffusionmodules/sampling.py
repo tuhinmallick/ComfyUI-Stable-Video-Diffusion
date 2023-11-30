@@ -222,16 +222,15 @@ class HeunEDMSampler(EDMSampler):
         if torch.sum(next_sigma) < 1e-14:
             # Save a network evaluation if all noise levels are 0
             return euler_step
-        else:
-            denoised = self.denoise(euler_step, denoiser, next_sigma, cond, uc)
-            d_new = to_d(euler_step, next_sigma, denoised)
-            d_prime = (d + d_new) / 2.0
+        denoised = self.denoise(euler_step, denoiser, next_sigma, cond, uc)
+        d_new = to_d(euler_step, next_sigma, denoised)
+        d_prime = (d + d_new) / 2.0
 
-            # apply correction if noise level is not 0
-            x = torch.where(
-                append_dims(next_sigma, x.ndim) > 0.0, x + d_prime * dt, euler_step
-            )
-            return x
+        # apply correction if noise level is not 0
+        x = torch.where(
+            append_dims(next_sigma, x.ndim) > 0.0, x + d_prime * dt, euler_step
+        )
+        return x
 
 
 class EulerAncestralSampler(AncestralSampler):
@@ -289,23 +288,21 @@ class DPMPP2MSampler(BaseDiffusionSampler):
         t, t_next = [to_neg_log_sigma(s) for s in (sigma, next_sigma)]
         h = t_next - t
 
-        if previous_sigma is not None:
-            h_last = t - to_neg_log_sigma(previous_sigma)
-            r = h_last / h
-            return h, r, t, t_next
-        else:
+        if previous_sigma is None:
             return h, None, t, t_next
+        h_last = t - to_neg_log_sigma(previous_sigma)
+        r = h_last / h
+        return h, r, t, t_next
 
     def get_mult(self, h, r, t, t_next, previous_sigma):
         mult1 = to_sigma(t_next) / to_sigma(t)
         mult2 = (-h).expm1()
 
-        if previous_sigma is not None:
-            mult3 = 1 + 1 / (2 * r)
-            mult4 = 1 / (2 * r)
-            return mult1, mult2, mult3, mult4
-        else:
+        if previous_sigma is None:
             return mult1, mult2
+        mult3 = 1 + 1 / (2 * r)
+        mult4 = 1 / (2 * r)
+        return mult1, mult2, mult3, mult4
 
     def sampler_step(
         self,
@@ -330,14 +327,13 @@ class DPMPP2MSampler(BaseDiffusionSampler):
         if old_denoised is None or torch.sum(next_sigma) < 1e-14:
             # Save a network evaluation if all noise levels are 0 or on the first step
             return x_standard, denoised
-        else:
-            denoised_d = mult[2] * denoised - mult[3] * old_denoised
-            x_advanced = mult[0] * x - mult[1] * denoised_d
+        denoised_d = mult[2] * denoised - mult[3] * old_denoised
+        x_advanced = mult[0] * x - mult[1] * denoised_d
 
-            # apply correction if noise level is not 0 and not first step
-            x = torch.where(
-                append_dims(next_sigma, x.ndim) > 0.0, x_advanced, x_standard
-            )
+        # apply correction if noise level is not 0 and not first step
+        x = torch.where(
+            append_dims(next_sigma, x.ndim) > 0.0, x_advanced, x_standard
+        )
 
         return x, denoised
 
