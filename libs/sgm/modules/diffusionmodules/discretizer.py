@@ -35,8 +35,7 @@ class EDMDiscretization(Discretization):
         ramp = torch.linspace(0, 1, n, device=device)
         min_inv_rho = self.sigma_min ** (1 / self.rho)
         max_inv_rho = self.sigma_max ** (1 / self.rho)
-        sigmas = (max_inv_rho + ramp * (min_inv_rho - max_inv_rho)) ** self.rho
-        return sigmas
+        return (max_inv_rho + ramp * (min_inv_rho - max_inv_rho)) ** self.rho
 
 
 class LegacyDDPMDiscretization(Discretization):

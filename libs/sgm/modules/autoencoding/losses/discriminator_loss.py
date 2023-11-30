@@ -41,7 +41,7 @@ class GeneralLPIPSWithDiscriminator(nn.Module):
                 f"independently."
             )
         self.scale_input_to_tgt_size = scale_input_to_tgt_size
-        assert disc_loss in ["hinge", "vanilla"]
+        assert disc_loss in {"hinge", "vanilla"}
         self.perceptual_loss = LPIPS().eval()
         self.perceptual_weight = perceptual_weight
         # output log variance
@@ -242,12 +242,13 @@ class GeneralLPIPSWithDiscriminator(nn.Module):
             if global_step >= self.discriminator_iter_start or not self.training:
                 logits_fake = self.discriminator(reconstructions.contiguous())
                 g_loss = -torch.mean(logits_fake)
-                if self.training:
-                    d_weight = self.calculate_adaptive_weight(
+                d_weight = (
+                    self.calculate_adaptive_weight(
                         nll_loss, g_loss, last_layer=last_layer
                     )
-                else:
-                    d_weight = torch.tensor(1.0)
+                    if self.training
+                    else torch.tensor(1.0)
+                )
             else:
                 d_weight = torch.tensor(0.0)
                 g_loss = torch.tensor(0.0, requires_grad=True)
@@ -277,11 +278,12 @@ class GeneralLPIPSWithDiscriminator(nn.Module):
             logits_real = self.discriminator(inputs.contiguous().detach())
             logits_fake = self.discriminator(reconstructions.contiguous().detach())
 
-            if global_step >= self.discriminator_iter_start or not self.training:
-                d_loss = self.disc_factor * self.disc_loss(logits_real, logits_fake)
-            else:
-                d_loss = torch.tensor(0.0, requires_grad=True)
-
+            d_loss = (
+                self.disc_factor * self.disc_loss(logits_real, logits_fake)
+                if global_step >= self.discriminator_iter_start
+                or not self.training
+                else torch.tensor(0.0, requires_grad=True)
+            )
             log = {
                 f"{split}/loss/disc": d_loss.clone().detach().mean(),
                 f"{split}/logits/real": logits_real.detach().mean(),

@@ -108,7 +108,7 @@ class VideoTransformerBlock(nn.Module):
 
     def _forward(self, x, context=None, timesteps=None):
         assert self.timesteps or timesteps
-        assert not (self.timesteps and timesteps) or self.timesteps == timesteps
+        assert not self.timesteps or not timesteps or self.timesteps == timesteps
         timesteps = self.timesteps or timesteps
         B, S, C = x.shape
         x = rearrange(x, "(b t) s c -> (b s) t c", t=timesteps)
@@ -237,10 +237,7 @@ class SpatialVideoTransformer(SpatialTransformer):
     ) -> torch.Tensor:
         _, _, h, w = x.shape
         x_in = x
-        spatial_context = None
-        if exists(context):
-            spatial_context = context
-
+        spatial_context = context if exists(context) else None
         if self.use_spatial_context:
             assert (
                 context.ndim == 3
@@ -251,7 +248,7 @@ class SpatialVideoTransformer(SpatialTransformer):
             time_context = repeat(
                 time_context_first_timestep, "b ... -> (b n) ...", n=h * w
             )
-        elif time_context is not None and not self.use_spatial_context:
+        elif time_context is not None:
             time_context = repeat(time_context, "b ... -> (b n) ...", n=h * w)
             if time_context.ndim == 2:
                 time_context = rearrange(time_context, "b c -> b 1 c")
@@ -275,9 +272,7 @@ class SpatialVideoTransformer(SpatialTransformer):
         emb = self.time_pos_embed(t_emb)
         emb = emb[:, None, :]
 
-        for it_, (block, mix_block) in enumerate(
-            zip(self.transformer_blocks, self.time_stack)
-        ):
+        for block, mix_block in zip(self.transformer_blocks, self.time_stack):
             x = block(
                 x,
                 context=spatial_context,
@@ -297,5 +292,4 @@ class SpatialVideoTransformer(SpatialTransformer):
         x = rearrange(x, "b (h w) c -> b c h w", h=h, w=w)
         if not self.use_linear:
             x = self.proj_out(x)
-        out = x + x_in
-        return out
+        return x + x_in

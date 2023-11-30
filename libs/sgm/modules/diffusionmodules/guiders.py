@@ -27,8 +27,7 @@ class VanillaCFG(Guider):
 
     def __call__(self, x: torch.Tensor, sigma: torch.Tensor) -> torch.Tensor:
         x_u, x_c = x.chunk(2)
-        x_pred = x_u + self.scale * (x_c - x_u)
-        return x_pred
+        return x_u + self.scale * (x_c - x_u)
 
     def prepare_inputs(self, x, s, c, uc):
         c_out = dict()

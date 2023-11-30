@@ -69,7 +69,4 @@ class DiscreteDenoiser(Denoiser):
         return self.idx_to_sigma(self.sigma_to_idx(sigma))
 
     def possibly_quantize_c_noise(self, c_noise: torch.Tensor) -> torch.Tensor:
-        if self.quantize_c_noise:
-            return self.sigma_to_idx(c_noise)
-        else:
-            return c_noise
+        return self.sigma_to_idx(c_noise) if self.quantize_c_noise else c_noise

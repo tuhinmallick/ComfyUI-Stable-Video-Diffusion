@@ -10,7 +10,7 @@ from einops import rearrange, repeat
 from typing import Optional
 
 def get_unique_embedder_keys_from_conditioner(conditioner):
-    return list(set([x.input_key for x in conditioner.embedders]))
+    return list({x.input_key for x in conditioner.embedders})
 
 def get_batch(keys, value_dict, N, T, device):
     batch = {}
@@ -47,7 +47,7 @@ def get_batch(keys, value_dict, N, T, device):
     if T is not None:
         batch["num_video_frames"] = T
 
-    for key in batch.keys():
+    for key in batch:
         if key not in batch_uc and isinstance(batch[key], torch.Tensor):
             batch_uc[key] = torch.clone(batch[key])
     return batch, batch_uc

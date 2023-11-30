@@ -13,11 +13,10 @@ def handle_stream(stream, prefix):
                 print('\r' + msg, end="", file=sys.stderr),
             else:
                 print('\r' + msg[:-1], end="", file=sys.stderr),
+        elif prefix == '[!]':
+            print(prefix, msg, end="", file=sys.stderr)
         else:
-            if prefix == '[!]':
-                print(prefix, msg, end="", file=sys.stderr)
-            else:
-                print(prefix, msg, end="")
+            print(prefix, msg, end="")
 
 
 def process_wrap(cmd_str, cwd_path, handler=None):

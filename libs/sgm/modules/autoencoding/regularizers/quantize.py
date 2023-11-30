@@ -123,7 +123,6 @@ class GumbelQuantizer(AbstractQuantizer):
         # actually, always true seems to work
         hard = self.straight_through if self.training else True
         temp = self.temperature if temp is None else temp
-        out_dict = {}
         logits = self.proj(z)
         if self.remap is not None:
             # continue only with used logits
@@ -143,8 +142,7 @@ class GumbelQuantizer(AbstractQuantizer):
             self.kl_weight
             * torch.sum(qy * torch.log(qy * self.n_embed + 1e-10), dim=1).mean()
         )
-        out_dict[self.loss_key] = diff
-
+        out_dict = {self.loss_key: diff}
         ind = soft_one_hot.argmax(dim=1)
         out_dict["indices"] = ind
         if self.remap is not None:
@@ -165,8 +163,7 @@ class GumbelQuantizer(AbstractQuantizer):
         one_hot = (
             F.one_hot(indices, num_classes=self.n_embed).permute(0, 3, 1, 2).float()
         )
-        z_q = einsum("b n h w, n d -> b d h w", one_hot, self.embed.weight)
-        return z_q
+        return einsum("b n h w, n d -> b d h w", one_hot, self.embed.weight)
 
 
 class VectorQuantizer(AbstractQuantizer):

@@ -420,7 +420,7 @@ class MemoryEfficientCrossAttention(nn.Module):
             max_bs = 32768
             N = q.shape[0]
             n_batches = math.ceil(N / max_bs)
-            out = list()
+            out = []
             for i_batch in range(n_batches):
                 batch = slice(i_batch * max_bs, (i_batch + 1) * max_bs)
                 out.append(
@@ -530,15 +530,13 @@ class BasicTransformerBlock(nn.Module):
         kwargs = {"x": x}
 
         if context is not None:
-            kwargs.update({"context": context})
+            kwargs["context"] = context
 
         if additional_tokens is not None:
-            kwargs.update({"additional_tokens": additional_tokens})
+            kwargs["additional_tokens"] = additional_tokens
 
         if n_times_crossframe_attn_in_self:
-            kwargs.update(
-                {"n_times_crossframe_attn_in_self": n_times_crossframe_attn_in_self}
-            )
+            kwargs["n_times_crossframe_attn_in_self"] = n_times_crossframe_attn_in_self
 
         # return mixed_checkpoint(self._forward, kwargs, self.parameters(), self.checkpoint)
         if self.checkpoint:

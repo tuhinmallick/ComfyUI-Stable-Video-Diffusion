@@ -34,16 +34,16 @@ class StableDataModuleFromConfig(LightningDataModule):
 
         self.val_config = validation
         if not skip_val_loader:
-            if self.val_config is not None:
-                assert (
-                    "datapipeline" in self.val_config and "loader" in self.val_config
-                ), "validation config requires the fields `datapipeline` and `loader`"
-            else:
+            if self.val_config is None:
                 print(
                     "Warning: No Validation datapipeline defined, using that one from training"
                 )
                 self.val_config = train
 
+            else:
+                assert (
+                    "datapipeline" in self.val_config and "loader" in self.val_config
+                ), "validation config requires the fields `datapipeline` and `loader`"
         self.test_config = test
         if self.test_config is not None:
             assert (
@@ -58,11 +58,7 @@ class StableDataModuleFromConfig(LightningDataModule):
 
     def setup(self, stage: str) -> None:
         print("Preparing datasets")
-        if self.dummy:
-            data_fn = create_dummy_dataset
-        else:
-            data_fn = create_dataset
-
+        data_fn = create_dummy_dataset if self.dummy else create_dataset
         self.train_datapipeline = data_fn(**self.train_config.datapipeline)
         if self.val_config:
             self.val_datapipeline = data_fn(**self.val_config.datapipeline)
